@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGPA & CGPA Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080f;
+    --surface: #0e1120;
+    --surface2: #141729;
+    --border: rgba(99,120,255,0.18);
+    --accent: #6378ff;
+    --accent2: #a78bfa;
+    --accent3: #38bdf8;
+    --gold: #fbbf24;
+    --danger: #f87171;
+    --success: #34d399;
+    --text: #e8eaf6;
+    --muted: #7b83b0;
+    --radius: 16px;
+    --glow: 0 0 32px rgba(99,120,255,0.22);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ——— ANIMATED BACKGROUND ——— */
+  .bg-orbs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+  .orb {
+    position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.22;
+    animation: drift 14s ease-in-out infinite alternate;
+  }
+  .orb1 { width:500px; height:500px; background:#6378ff; top:-120px; left:-120px; animation-delay:0s; }
+  .orb2 { width:400px; height:400px; background:#a78bfa; bottom:-80px; right:-80px; animation-delay:-4s; }
+  .orb3 { width:300px; height:300px; background:#38bdf8; top:40%; left:60%; animation-delay:-8s; }
+
+  @keyframes drift {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(40px,30px) scale(1.08); }
+  }
+
+  /* ——— WRAPPER ——— */
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 760px; margin: 0 auto;
+    padding: 30px 20px 60px;
+  }
+
+  /* ——— HEADER ——— */
+  .header {
+    text-align: center; margin-bottom: 36px;
+    animation: slideDown 0.7s cubic-bezier(.22,1,.36,1) both;
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -1px; line-height: 1.1;
+  }
+  .header p {
+    color: var(--muted); font-size: 0.95rem; margin-top: 8px; font-weight: 400;
+  }
+  .header-badge {
+    display: inline-block; background: rgba(99,120,255,0.12); border: 1px solid var(--border);
+    color: var(--accent2); font-size: 0.75rem; padding: 4px 14px; border-radius: 100px;
+    margin-bottom: 14px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  /* ——— STEP INDICATOR ——— */
+  .step-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin-bottom: 34px;
+    animation: fadeIn 0.6s ease both 0.2s;
+  }
+  .step-dot {
+    width: 32px; height: 32px; border-radius: 50%; font-size: 0.8rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--border); color: var(--muted);
+    background: var(--surface); transition: all 0.4s ease; position: relative;
+  }
+  .step-dot.active {
+    border-color: var(--accent); color: #fff; background: var(--accent);
+    box-shadow: 0 0 18px rgba(99,120,255,0.5);
+  }
+  .step-dot.done {
+    border-color: var(--success); color: var(--success); background: rgba(52,211,153,0.12);
+  }
+  .step-dot.done::after { content: '✓'; font-size: 0.85rem; }
+  .step-line {
+    width: 48px; height: 2px;
+    background: var(--border); transition: background 0.4s ease;
+  }
+  .step-line.done { background: var(--success); }
+
+  /* ——— CARD ——— */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--glow);
+    animation: cardIn 0.5s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(28px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes slideDown {
+    from { opacity:0; transform: translateY(-22px); }
+    to   { opacity:1; transform: none; }
+  }
+  @keyframes fadeIn {
+    from { opacity:0; } to { opacity:1; }
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .card-sub {
+    color: var(--muted); font-size: 0.88rem; margin-bottom: 24px;
+  }
+
+  /* ——— FORM ELEMENTS ——— */
+  label {
+    display: block; font-size: 0.85rem; font-weight: 600;
+    color: var(--muted); margin-bottom: 8px; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  input[type="number"], input[type="text"], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    appearance: none;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,120,255,0.18);
+  }
+  input::placeholder { color: var(--muted); }
+
+  /* ——— YEAR SELECTOR ——— */
+  .year-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  @media(min-width:500px) { .year-grid { grid-template-columns: repeat(4, 1fr); } }
+  .year-card {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 18px 10px; text-align: center;
+    cursor: pointer; transition: all 0.25s ease; user-select: none;
+  }
+  .year-card:hover { border-color: var(--accent); box-shadow: 0 0 12px rgba(99,120,255,0.2); }
+  .year-card.selected {
+    border-color: var(--accent); background: rgba(99,120,255,0.12);
+    box-shadow: 0 0 18px rgba(99,120,255,0.28);
+  }
+  .year-card .yr-num {
+    font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .year-card .yr-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  /* ——— SUBJECT COUNTER ——— */
+  .sub-stepper {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .stepper-btn {
+    width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 1.3rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .stepper-btn:hover { border-color: var(--accent); background: rgba(99,120,255,0.12); }
+  .stepper-val {
+    font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800;
+    min-width: 50px; text-align: center; color: var(--accent);
+  }
+
+  /* ——— CREDIT INPUTS ——— */
+  .subjects-list { display: flex; flex-direction: column; gap: 12px; }
+  .sub-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    animation: subRowIn 0.3s ease both;
+    transition: border-color 0.2s;
+  }
+  .sub-row:hover { border-color: rgba(99,120,255,0.35); }
+  @keyframes subRowIn {
+    from { opacity:0; transform: translateX(-16px); }
+    to   { opacity:1; transform: none; }
+  }
+  .sub-index {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(99,120,255,0.15); color: var(--accent);
+    font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sub-row input { flex: 1; margin: 0; }
+  .credit-input { width: 90px !important; flex: 0 0 90px !important; text-align: center; }
+  .sub-row-name-label { font-size: 0.75rem; color: var(--muted); flex: 1; }
+
+  /* ——— GRADE TABLE ——— */
+  .grade-table {
+    width: 100%; border-collapse: collapse;
+    border-radius: 12px; overflow: hidden;
+  }
+  .grade-table thead tr {
+    background: rgba(99,120,255,0.12);
+  }
+  .grade-table th {
+    padding: 12px 16px; font-size: 0.8rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); text-align: left;
+  }
+  .grade-table td {
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    font-size: 0.95rem; vertical-align: middle;
+  }
+  .grade-table tbody tr {
+    transition: background 0.2s;
+    animation: rowFade 0.4s ease both;
+  }
+  .grade-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .grade-table tbody tr.failed { background: rgba(248,113,113,0.08) !important; }
+  @keyframes rowFade {
+    from { opacity:0; transform: translateY(8px); }
+    to   { opacity:1; transform: none; }
+  }
+
+  /* Grade pill select */
+  .grade-select {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem; font-weight: 600;
+    padding: 7px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .grade-select:focus { border-color: var(--accent); outline: none; }
+  .grade-select option { background: var(--surface2); }
+
+  .subject-name-cell { font-weight: 500; }
+  .credit-badge {
+    display: inline-block; background: rgba(99,120,255,0.12);
+    color: var(--accent2); border-radius: 6px;
+    padding: 2px 9px; font-size: 0.82rem; font-weight: 600;
+  }
+
+  /* ——— BUTTONS ——— */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 12px; border: none;
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; box-shadow: 0 4px 18px rgba(99,120,255,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(99,120,255,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: var(--surface2); color: var(--muted); border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger {
+    background: rgba(248,113,113,0.12); color: var(--danger); border: 1.5px solid rgba(248,113,113,0.3);
+  }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* ——— RESULT PANEL ——— */
+  .result-panel {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 28px; margin-top: 24px;
+    animation: cardIn 0.5s ease both;
+  }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media(max-width:440px) { .result-grid { grid-template-columns: 1fr; } }
+  .result-box {
+    text-align: center; padding: 24px 16px;
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; position: relative; overflow: hidden;
+  }
+  .result-box::before {
+    content:''; position: absolute; top:0; left:0; right:0; height:3px;
+  }
+  .result-box.sgpa::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .result-box.cgpa::before { background: linear-gradient(90deg, var(--gold), #fb923c); }
+  .result-label {
+    font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px;
+  }
+  .result-value {
+    font-family: 'Syne', sans-serif; font-size: 2.8rem; font-weight: 800;
+    line-height: 1; animation: countUp 0.6s ease both;
+  }
+  .result-box.sgpa .result-value {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .result-box.cgpa .result-value {
+    background: linear-gradient(135deg, var(--gold), #fb923c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .result-grade {
+    margin-top: 10px; font-size: 0.85rem; font-weight: 600; color: var(--muted);
+  }
+  @keyframes countUp {
+    from { opacity:0; transform: scale(0.7); }
+    to   { opacity:1; transform: scale(1); }
+  }
+
+  /* old SGPA input */
+  .cgpa-input-row {
+    display: flex; align-items: center; gap: 14px; margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .cgpa-input-row label { margin: 0; white-space: nowrap; flex-shrink: 0; }
+  .cgpa-input-row input { flex: 1; min-width: 140px; }
+  .cgpa-input-row .btn { flex-shrink: 0; }
+
+  /* ——— DIVIDER ——— */
+  .divider {
+    height: 1px; background: var(--border); margin: 24px 0;
+  }
+
+  /* ——— MISC ——— */
+  .section-label {
+    font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--accent); margin-bottom: 12px;
+  }
+  .hidden { display: none !important; }
+  .mt-4 { margin-top: 16px; }
+  .mt-6 { margin-top: 24px; }
+  .flex-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  .info-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.22);
+    color: var(--accent3); font-size: 0.8rem; padding: 5px 12px;
+    border-radius: 100px; font-weight: 500;
+  }
+
+  /* Ripple animation on buttons */
+  .btn-primary::after {
+    content: ''; position: absolute; border-radius: 50%;
+    width: 0; height: 0; background: rgba(255,255,255,0.15);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+    opacity: 0;
+  }
+  .btn-primary:active::after { width: 200px; height: 200px; opacity: 1; }
+  .btn { position: relative; overflow: hidden; }
+
+  /* Grade colour coding */
+  .g-ap { color: #34d399; }
+  .g-a  { color: #6ee7b7; }
+  .g-b  { color: #93c5fd; }
+  .g-c  { color: #fbbf24; }
+  .g-d  { color: #fb923c; }
+  .g-e  { color: #f97316; }
+  .g-f  { color: #f87171; }
+
+  footer { text-align:center; color: var(--muted); font-size: 0.8rem; margin-top: 40px; }
+  footer span { color: var(--accent2); }
+
+  /* Pulse on step change */
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+  }
+  .pulse { animation: pulse 0.35s ease; }
+
+  /* Success bar */
+  .score-bar-wrap { margin-top: 12px; }
+  .score-bar-track {
+    height: 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.06); overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.22,1,.36,1);
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .result-box.cgpa .score-bar-fill {
+    background: linear-gradient(90deg, var(--gold), #fb923c);
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">Academic GPA Calculator</div>
+    <h1>SGPA &amp; CGPA<br>Calculator</h1>
+    <p>Smart, animated grade calculator with multi-year CGPA tracking</p>
+  </div>
+
+  <!-- STEP BAR -->
+  <div class="step-bar" id="stepBar">
+    <div class="step-dot active" id="sd1">1</div>
+    <div class="step-line" id="sl1"></div>
+    <div class="step-dot" id="sd2">2</div>
+    <div class="step-line" id="sl2"></div>
+    <div class="step-dot" id="sd3">3</div>
+    <div class="step-line" id="sl3"></div>
+    <div class="step-dot" id="sd4">4</div>
+  </div>
+
+  <!-- ============ STEP 1: YEAR & SUBJECTS ============ -->
+  <div id="step1" class="card">
+    <div class="card-title">📅 Select Year &amp; Subjects</div>
+    <div class="card-sub">Choose your current academic year and number of subjects this semester.</div>
+
+    <div class="section-label">Academic Year</div>
+    <div class="year-grid" id="yearGrid">
+      <div class="year-card" onclick="selectYear(1)">
+        <div class="yr-num">I</div>
+        <div class="yr-label">First Year</div>
+      </div>
+      <div class="year-card" onclick="selectYear(2)">
+        <div class="yr-num">II</div>
+        <div class="yr-label">Second Year</div>
+      </div>
+      <div class="year-card" onclick="selectYear(3)">
+        <div class="yr-num">III</div>
+        <div class="yr-label">Third Year</div>
+      </div>
+      <div class="year-card" onclick="selectYear(4)">
+        <div class="yr-num">IV</div>
+        <div class="yr-label">Fourth Year</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Number of Subjects</div>
+    <div class="sub-stepper">
+      <button class="stepper-btn" onclick="changeSubCount(-1)">−</button>
+      <div class="stepper-val" id="subCountDisplay">6</div>
+      <button class="stepper-btn" onclick="changeSubCount(1)">+</button>
+      <span style="color:var(--muted); font-size:0.9rem;">subjects this semester</span>
+    </div>
+
+    <div class="mt-6">
+      <button class="btn btn-primary btn-full" onclick="goStep2()">
+        Next: Enter Credits →
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 2: CREDIT ENTRY ============ -->
+  <div id="step2" class="card hidden">
+    <div class="card-title">🎯 Subject Credits</div>
+    <div class="card-sub">Enter a name (optional) and the credit hours for each subject.</div>
+
+    <div class="subjects-list" id="creditList"></div>
+
+    <div class="divider"></div>
+    <div class="flex-row">
+      <button class="btn btn-ghost" onclick="goStep1()">← Back</button>
+      <button class="btn btn-primary" onclick="goStep3()">Next: Enter Grades →</button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 3: GRADE ENTRY ============ -->
+  <div id="step3" class="card hidden">
+    <div class="card-title">📝 Select Grades</div>
+    <div class="card-sub" id="step3Sub">Choose the grade you received for each subject.</div>
+
+    <table class="grade-table" id="gradeTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Subject</th>
+          <th style="text-align:center">Credits</th>
+          <th style="text-align:center">Grade</th>
+          <th style="text-align:center">Points</th>
+        </tr>
+      </thead>
+      <tbody id="gradeTbody"></tbody>
+    </table>
+
+    <!-- CGPA from previous years (shown if year > 1) -->
+    <div id="prevCgpaSection" class="hidden" style="margin-top:20px;">
+      <div class="divider"></div>
+      <div class="section-label">Previous CGPA (Optional)</div>
+      <div class="cgpa-input-row">
+        <label style="color:var(--muted)">CGPA up to last semester:</label>
+        <input type="number" id="prevCgpaInput" min="0" max="10" step="0.01" placeholder="e.g. 8.45" style="max-width:180px">
+        <div class="info-chip">ℹ️ Leave blank to skip</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="flex-row">
+      <button class="btn btn-ghost" onclick="goStep2()">← Back</button>
+      <button class="btn btn-primary" onclick="calcSGPA()">⚡ Calculate SGPA &amp; CGPA</button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 4: RESULTS ============ -->
+  <div id="step4" class="card hidden">
+    <div class="card-title">🏆 Your Results</div>
+    <div class="card-sub" id="resultSub"></div>
+
+    <div class="result-grid">
+      <div class="result-box sgpa">
+        <div class="result-label">SGPA — This Semester</div>
+        <div class="result-value" id="sgpaVal">—</div>
+        <div class="result-grade" id="sgpaGrade"></div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="sgpaBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-box cgpa">
+        <div class="result-label">CGPA — Cumulative</div>
+        <div class="result-value" id="cgpaVal">—</div>
+        <div class="result-grade" id="cgpaGrade"></div>
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="cgpaBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject breakdown -->
+    <div class="mt-6">
+      <div class="section-label">Subject Breakdown</div>
+      <table class="grade-table">
+        <thead>
+          <tr><th>#</th><th>Subject</th><th style="text-align:center">Credits</th><th style="text-align:center">Grade</th><th style="text-align:center">GP</th><th style="text-align:center">Weighted</th></tr>
+        </thead>
+        <tbody id="resultTbody"></tbody>
+        <tfoot>
+          <tr id="resultTfoot" style="font-weight:700; background:rgba(99,120,255,0.07)"></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-primary btn-full" onclick="resetAll()">↺ Calculate Again</button>
+    <div style="margin-top:10px">
+      <button class="btn btn-ghost btn-full" onclick="goStep3()">← Change Grades</button>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<footer>
+  SGPA &amp; CGPA Calculator · <span>powered by grade points</span><br>
+  A+: 10 · A: 9 · B: 8 · C: 7 · D: 6 · E: 5 · F: 0
+</footer>
+
+<script>
+/* ============================
+   STATE
+   ============================ */
+let state = {
+  year: null,
+  subCount: 6,
+  subjects: [],   // [{name, credits}]
+  grades: [],
+  sgpa: null,
+  cgpa: null,
+};
+
+const GRADE_POINTS = { 'A+':10, 'A':9, 'B':8, 'C':7, 'D':6, 'E':5, 'F':0 };
+const GRADE_CLASS  = { 'A+':'g-ap','A':'g-a','B':'g-b','C':'g-c','D':'g-d','E':'g-e','F':'g-f' };
+
+function gradeLabel(gpa) {
+  if (gpa >= 9.5) return '🌟 Outstanding';
+  if (gpa >= 9.0) return '🏅 Excellent';
+  if (gpa >= 8.0) return '✅ Very Good';
+  if (gpa >= 7.0) return '👍 Good';
+  if (gpa >= 6.0) return '📘 Average';
+  if (gpa >= 5.0) return '⚠️ Below Average';
+  return '❌ Failed / ATKT';
+}
+
+/* ============================
+   STEP MANAGER
+   ============================ */
+function setStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('step'+i).classList.add('hidden');
+    const dot = document.getElementById('sd'+i);
+    if (i < n)  { dot.className='step-dot done'; dot.textContent=''; }
+    else if (i===n) { dot.className='step-dot active'; dot.textContent=i; }
+    else        { dot.className='step-dot'; dot.textContent=i; }
+    if (i < 4) {
+      const line = document.getElementById('sl'+i);
+      line.className = i < n ? 'step-line done' : 'step-line';
+    }
+  });
+  const el = document.getElementById('step'+n);
+  el.classList.remove('hidden');
+  el.style.animation='none';
+  void el.offsetWidth;
+  el.style.animation='';
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+/* ============================
+   STEP 1 — YEAR & SUBJECTS
+   ============================ */
+function selectYear(y) {
+  state.year = y;
+  document.querySelectorAll('.year-card').forEach((c,i)=>{
+    c.classList.toggle('selected', i+1===y);
+  });
+}
+
+function changeSubCount(delta) {
+  state.subCount = Math.max(1, Math.min(20, state.subCount + delta));
+  const d = document.getElementById('subCountDisplay');
+  d.textContent = state.subCount;
+  d.classList.add('pulse');
+  setTimeout(()=> d.classList.remove('pulse'), 350);
+}
+
+function goStep1() { setStep(1); }
+
+function goStep2() {
+  if (!state.year) { shake('yearGrid'); alert('Please select a year.'); return; }
+  buildCreditList();
+  setStep(2);
+}
+
+/* ============================
+   STEP 2 — CREDITS
+   ============================ */
+function buildCreditList() {
+  const list = document.getElementById('creditList');
+  list.innerHTML = '';
+  const old = state.subjects;
+  state.subjects = [];
+
+  for (let i=0; i<state.subCount; i++) {
+    const prev = old[i] || {};
+    const row = document.createElement('div');
+    row.className = 'sub-row';
+    row.style.animationDelay = (i*0.045)+'s';
+    row.innerHTML = `
+      <div class="sub-index">${i+1}</div>
+      <input type="text" placeholder="Subject name (optional)" class="sub-name-inp" value="${prev.name||''}" data-idx="${i}">
+      <input type="number" class="credit-input" placeholder="Credits" min="0" max="10" step="0.5" value="${prev.credits||''}" data-idx="${i}">
+    `;
+    list.appendChild(row);
+    state.subjects.push({ name: prev.name||'', credits: prev.credits||'' });
+  }
+
+  list.querySelectorAll('.sub-name-inp').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      state.subjects[+e.target.dataset.idx].name = e.target.value.trim();
+    });
+  });
+  list.querySelectorAll('.credit-input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      state.subjects[+e.target.dataset.idx].credits = parseFloat(e.target.value)||0;
+    });
+  });
+}
+
+function goStep3() {
+  // Validate credits
+  const rows = document.getElementById('creditList').querySelectorAll('.sub-row');
+  let valid = true;
+  rows.forEach((row, i)=>{
+    const c = parseFloat(row.querySelector('.credit-input').value);
+    if (isNaN(c) || c < 0) valid = false;
+    state.subjects[i].name    = row.querySelector('.sub-name-inp').value.trim();
+    state.subjects[i].credits = c||0;
+  });
+  if (!valid) { alert('Please enter valid credits for all subjects.'); return; }
+
+  buildGradeTable();
+  setStep(3);
+}
+
+/* ============================
+   STEP 3 — GRADES
+   ============================ */
+function buildGradeTable() {
+  const tbody = document.getElementById('gradeTbody');
+  tbody.innerHTML = '';
+  const prevG = state.grades;
+  state.grades = [];
+
+  state.subjects.forEach((sub, i)=>{
+    const tr = document.createElement('tr');
+    tr.style.animationDelay = (i*0.05)+'s';
+    const prevGrade = prevG[i]||'';
+    const opts = ['A+','A','B','C','D','E','F'].map(g=>`<option value="${g}" ${g===prevGrade?'selected':''}>${g}</option>`).join('');
+    const name = sub.name || `Subject ${i+1}`;
+    tr.innerHTML = `
+      <td style="color:var(--muted); font-size:0.8rem;">${i+1}</td>
+      <td class="subject-name-cell">${name}</td>
+      <td style="text-align:center"><span class="credit-badge">${sub.credits}</span></td>
+      <td style="text-align:center">
+        <select class="grade-select" id="gsel_${i}" onchange="updateGradeRow(${i})">
+          <option value="">—</option>${opts}
+        </select>
+      </td>
+      <td style="text-align:center; font-weight:700;" id="gp_${i}">—</td>
+    `;
+    tbody.appendChild(tr);
+    state.grades.push(prevGrade);
+    if (prevGrade) setTimeout(()=> updateGradeRow(i), 80);
+  });
+
+  // Show prev CGPA section if year > 1
+  const sec = document.getElementById('prevCgpaSection');
+  if (state.year > 1) sec.classList.remove('hidden');
+  else               sec.classList.add('hidden');
+
+  document.getElementById('step3Sub').textContent =
+    `Year ${toRoman(state.year)} · ${state.subCount} subject${state.subCount!==1?'s':''}`;
+}
+
+function updateGradeRow(i) {
+  const sel = document.getElementById('gsel_'+i);
+  const grade = sel.value;
+  const gp = GRADE_POINTS[grade];
+  const gpEl = document.getElementById('gp_'+i);
+  state.grades[i] = grade;
+  if (grade) {
+    gpEl.textContent = gp;
+    gpEl.className = GRADE_CLASS[grade];
+    // Failed row highlight
+    const row = sel.closest('tr');
+    row.classList.toggle('failed', grade==='F');
+  } else {
+    gpEl.textContent = '—';
+    gpEl.className = '';
+  }
+}
+
+/* ============================
+   CALCULATE
+   ============================ */
+function calcSGPA() {
+  const grades = state.grades;
+  const subs = state.subjects;
+
+  // Validate all grades selected
+  for (let i=0; i<subs.length; i++) {
+    if (!grades[i]) {
+      alert(`Please select grade for subject ${i+1} (${subs[i].name || 'Subject '+(i+1)}).`);
+      document.getElementById('gsel_'+i).focus();
+      return;
+    }
+  }
+
+  let totalCredits=0, weightedSum=0;
+  subs.forEach((sub,i)=>{
+    const c = sub.credits;
+    const gp = GRADE_POINTS[grades[i]];
+    totalCredits += c;
+    weightedSum  += gp * c;
+  });
+
+  const sgpa = totalCredits>0 ? weightedSum/totalCredits : 0;
+  state.sgpa = sgpa;
+
+  // CGPA calculation
+  let cgpa = sgpa;
+  const prevInput = document.getElementById('prevCgpaInput');
+  const prevVal = prevInput ? parseFloat(prevInput.value) : NaN;
+  if (state.year > 1 && !isNaN(prevVal) && prevVal >= 0 && prevVal <= 10) {
+    cgpa = (sgpa + prevVal) / 2;
+  }
+  state.cgpa = cgpa;
+
+  buildResults(sgpa, cgpa, totalCredits, weightedSum);
+  setStep(4);
+}
+
+function buildResults(sgpa, cgpa, totalCredits, weightedSum) {
+  // Main values
+  document.getElementById('sgpaVal').textContent = sgpa.toFixed(2);
+  document.getElementById('cgpaVal').textContent = cgpa.toFixed(2);
+  document.getElementById('sgpaGrade').textContent = gradeLabel(sgpa);
+  document.getElementById('cgpaGrade').textContent = gradeLabel(cgpa);
+  document.getElementById('resultSub').textContent =
+    `Year ${toRoman(state.year)} · Total Credits: ${totalCredits} · Weighted Sum: ${weightedSum.toFixed(1)}`;
+
+  // Bar animation (percentage of 10)
+  setTimeout(()=>{
+    document.getElementById('sgpaBar').style.width = (sgpa/10*100)+'%';
+    document.getElementById('cgpaBar').style.width = (cgpa/10*100)+'%';
+  }, 200);
+
+  // Breakdown table
+  const tbody = document.getElementById('resultTbody');
+  tbody.innerHTML = '';
+  state.subjects.forEach((sub,i)=>{
+    const grade = state.grades[i];
+    const gp    = GRADE_POINTS[grade];
+    const wtd   = (gp * sub.credits).toFixed(1);
+    const tr = document.createElement('tr');
+    tr.style.animationDelay=(i*0.04)+'s';
+    if (grade==='F') tr.classList.add('failed');
+    const name = sub.name || `Subject ${i+1}`;
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:0.8rem">${i+1}</td>
+      <td>${name}</td>
+      <td style="text-align:center"><span class="credit-badge">${sub.credits}</span></td>
+      <td style="text-align:center; font-weight:700;" class="${GRADE_CLASS[grade]}">${grade}</td>
+      <td style="text-align:center">${gp}</td>
+      <td style="text-align:center; font-weight:600;">${wtd}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Footer row
+  document.getElementById('resultTfoot').innerHTML = `
+    <td colspan="2" style="padding:12px 14px">Total</td>
+    <td style="text-align:center;padding:12px 14px">${totalCredits}</td>
+    <td colspan="2"></td>
+    <td style="text-align:center;padding:12px 14px;color:var(--accent2)">${weightedSum.toFixed(1)}</td>
+  `;
+}
+
+/* ============================
+   UTILS
+   ============================ */
+function toRoman(n) { return ['I','II','III','IV'][n-1]||n; }
+
+function shake(id) {
+  const el = document.getElementById(id);
+  el.style.animation='shake 0.4s ease';
+  setTimeout(()=> el.style.animation='', 400);
+}
+
+function resetAll() {
+  state = { year: null, subCount: 6, subjects: [], grades: [], sgpa: null, cgpa: null };
+  document.querySelectorAll('.year-card').forEach(c=> c.classList.remove('selected'));
+  document.getElementById('subCountDisplay').textContent = '6';
+  if (document.getElementById('prevCgpaInput'))
+    document.getElementById('prevCgpaInput').value='';
+  setStep(1);
+}
+
+/* ============================
+   KEYBOARD NAVIGATION
+   ============================ */
+document.addEventListener('keydown', e=>{
+  if (e.key==='Enter') {
+    const active = document.activeElement;
+    if (active && active.classList.contains('grade-select')) {
+      const grades = ['A+','A','B','C','D','E','F'];
+      const cur = active.value;
+      const idx = grades.indexOf(cur);
+      active.value = grades[(idx+1) % grades.length];
+      active.dispatchEvent(new Event('change'));
+    }
+  }
+});
+
+/* CSS shake keyframes injected */
+const ks = document.createElement('style');
+ks.textContent=`@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}`;
+document.head.appendChild(ks);
+</script>
+</body>
+</html>
